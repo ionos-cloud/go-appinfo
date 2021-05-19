@@ -28,6 +28,7 @@ var (
 	oldName      = name
 	oldMetadata  = metadata
 	oldGitCommit = gitCommit
+	oldBuildDate = buildDate
 )
 
 func resetAppInfo() {
@@ -35,6 +36,7 @@ func resetAppInfo() {
 	gitCommit = oldGitCommit
 	metadata = oldMetadata
 	name = oldName
+	buildDate = oldBuildDate
 }
 
 func TestVersion(t *testing.T) {
@@ -57,32 +59,38 @@ func TestName(t *testing.T) {
 }
 
 func TestAppInfo_String(t *testing.T) {
-	defer resetAppInfo()
-
 	cases := []struct {
-		name      string
-		gitCommit string
-		metadata  string
-		expBuild  string
+		name         string
+		gitCommit    string
+		gitTreeState string
+		metadata     string
+		expBuild     string
+		date         string
 	}{
 		{
 			name: "no metadata",
 		}, {
-			name:      "complete",
-			gitCommit: "sha",
-			metadata:  "build-info",
-			expBuild:  "+sha.build-info",
+			name:         "complete",
+			gitCommit:    "sha",
+			gitTreeState: "dirty",
+			metadata:     "build-info",
+			date:         "2021-05-19T15:24:12Z",
+			expBuild:     "+sha.build-info",
 		},
 	}
 	for _, c := range cases {
-		name = "app"
-		version = "v0.0.0"
-		gitCommit = c.gitCommit
-		metadata = c.metadata
-		got := Get().String()
-		exp := name + "/" + version + c.expBuild + " GoVersion: " + runtime.Version()
-		require.Equal(t, exp, got)
-		resetAppInfo()
+		t.Run(c.name, func(t *testing.T) {
+			defer resetAppInfo()
+			name = "app"
+			version = "v0.0.0"
+			gitCommit = c.gitCommit
+			metadata = c.metadata
+			buildDate = c.date
+			gitTreeState = c.gitTreeState
+			got := Get().String()
+			exp := name + "/" + version + c.expBuild + " GoVersion: " + runtime.Version()
+			require.Equal(t, exp, got)
+		})
 	}
 }
 
@@ -101,11 +109,16 @@ func TestGet(t *testing.T) {
 func TestBuild(t *testing.T) {
 	defer resetAppInfo()
 	gitCommit = "sha"
+	gitTreeState = "clean"
 	metadata = "meta"
 	exp := BuildInfo{
-		GitCommit: gitCommit,
-		Metadata:  metadata,
-		GoVersion: runtime.Version(),
+		GitCommit:    gitCommit,
+		GitTreeState: gitTreeState,
+		Date:         buildDate,
+		Metadata:     metadata,
+		GoVersion:    runtime.Version(),
+		Compiler:     runtime.Compiler,
+		Platform:     runtime.GOARCH,
 	}
 	require.Equal(t, exp, Build())
 }

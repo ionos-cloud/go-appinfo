@@ -23,30 +23,40 @@ import (
 )
 
 var (
-	name      = ""
-	version   = "v0.0.0"
-	metadata  = ""
-	gitCommit = ""
+	name         = ""
+	version      = "v0.0.0"
+	metadata     = ""
+	gitCommit    = ""
+	gitTreeState = ""
+	buildDate    = ""
 )
 
 // AppInfo holds all information about the application
 type AppInfo struct {
 	// Name of the application
 	Name string `json:"name,omitempty"`
-	// Version is the current semver.
+	// Version of the application
 	Version string `json:"version,omitempty"`
 
 	Build BuildInfo
 }
 
-// BuildInfo describes the compile time information.
+// BuildInfo describes the compile-time information.
 type BuildInfo struct {
 	// GitCommit is the git sha1.
 	GitCommit string `json:"gitCommit,omitempty"`
-	// Metadata is arbitrary metadata provided from the builder
+	// GitTreeState is the state of the git tree, either clean or dirty
+	GitTreeState string `json:"gitTreeState,omitempty"`
+	// Date when the package was built
+	Date string `json:"BuildDate,omitempty"`
+	// Metadata is arbitrary metadata provided by the builder
 	Metadata string `json:"metadata,omitempty"`
-	// GoVersion is the version of the Go compiler used.
+	// GoVersion is the version of the Go compiler used
 	GoVersion string `json:"goVersion,omitempty"`
+	// Compiler used for compilation
+	Compiler string `json:"compiler,omitempty"`
+	// Platform target platform of the build
+	Platform string `json:"platform,omitempty"`
 }
 
 // Get returns the AppInfo
@@ -70,9 +80,10 @@ func Version() string {
 
 // UserAgent returns a standard user agent string in the format "name/version"
 func UserAgent() string {
-	return fmt.Sprintf("%s/%s", name, Version())
+	return fmt.Sprintf("%s/%s", Name(), Version())
 }
 
+// String implements the fmt.Stringer interface
 func (info AppInfo) String() string {
 	v := info.Version
 	var buildIdentifiers []string
@@ -91,8 +102,12 @@ func (info AppInfo) String() string {
 // Build returns the BuildInfo
 func Build() BuildInfo {
 	return BuildInfo{
-		GitCommit: gitCommit,
-		Metadata:  metadata,
-		GoVersion: runtime.Version(),
+		GitCommit:    gitCommit,
+		GitTreeState: gitTreeState,
+		Date:         buildDate,
+		Metadata:     metadata,
+		GoVersion:    runtime.Version(),
+		Compiler:     runtime.Compiler,
+		Platform:     runtime.GOARCH,
 	}
 }
