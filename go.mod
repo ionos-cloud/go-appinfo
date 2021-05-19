@@ -1,8 +1,5 @@
-module github.com/ionos-cloud/go-version
+module github.com/ionos-cloud/go-appinfo
 
 go 1.16
 
-require (
-	github.com/stretchr/testify v1.7.0
-	golang.org/x/mod v0.4.2
-)
+require github.com/stretchr/testify v1.7.0
