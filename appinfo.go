@@ -37,7 +37,7 @@ type AppInfo struct {
 	Name string `json:"name,omitempty"`
 	// Version of the application
 	Version string `json:"version,omitempty"`
-
+	// Build contains details of the build
 	Build BuildInfo `json:"buildInfo,omitempty"`
 }
 
