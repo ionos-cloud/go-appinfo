@@ -38,7 +38,7 @@ type AppInfo struct {
 	// Version of the application
 	Version string `json:"version,omitempty"`
 
-	Build BuildInfo
+	Build BuildInfo `json:"buildInfo,omitempty"`
 }
 
 // BuildInfo describes the compile-time information.
@@ -47,15 +47,15 @@ type BuildInfo struct {
 	GitCommit string `json:"gitCommit,omitempty"`
 	// GitTreeState is the state of the git tree, either clean or dirty
 	GitTreeState string `json:"gitTreeState,omitempty"`
-	// Date when the package was built
-	Date string `json:"BuildDate,omitempty"`
+	// Date when the binary was built
+	Date string `json:"date,omitempty"`
 	// Metadata is arbitrary metadata provided by the builder
 	Metadata string `json:"metadata,omitempty"`
 	// GoVersion is the version of the Go compiler used
 	GoVersion string `json:"goVersion,omitempty"`
 	// Compiler used for compilation
 	Compiler string `json:"compiler,omitempty"`
-	// Platform target platform of the build
+	// Platform refers to the target platform of the binary
 	Platform string `json:"platform,omitempty"`
 }
 
@@ -90,13 +90,20 @@ func (info AppInfo) String() string {
 	if info.Build.GitCommit != "" {
 		buildIdentifiers = append(buildIdentifiers, info.Build.GitCommit)
 	}
+	if info.Build.GitTreeState != "" {
+		buildIdentifiers = append(buildIdentifiers, info.Build.GitTreeState)
+	}
+	if info.Build.Date != "" {
+		buildIdentifiers = append(buildIdentifiers, fmt.Sprintf("buildDate:%s", info.Build.Date))
+	}
 	if info.Build.Metadata != "" {
 		buildIdentifiers = append(buildIdentifiers, info.Build.Metadata)
 	}
 	if len(buildIdentifiers) > 0 {
 		v += "+" + strings.Join(buildIdentifiers, ".")
 	}
-	return fmt.Sprintf("%s/%s GoVersion: %s", info.Name, v, info.Build.GoVersion)
+	return fmt.Sprintf("%s/%s GoVersion: %s GoPlatform: %s GoCompiler: %s",
+		info.Name, v, info.Build.GoVersion, info.Build.Platform, info.Build.Compiler)
 }
 
 // Build returns the BuildInfo

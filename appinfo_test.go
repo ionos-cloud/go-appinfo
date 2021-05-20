@@ -24,16 +24,18 @@ import (
 )
 
 var (
-	oldVersion   = version
-	oldName      = name
-	oldMetadata  = metadata
-	oldGitCommit = gitCommit
-	oldBuildDate = buildDate
+	oldVersion      = version
+	oldName         = name
+	oldMetadata     = metadata
+	oldGitCommit    = gitCommit
+	oldGitTreeState = gitTreeState
+	oldBuildDate    = buildDate
 )
 
 func resetAppInfo() {
 	version = oldVersion
 	gitCommit = oldGitCommit
+	gitTreeState = oldGitTreeState
 	metadata = oldMetadata
 	name = oldName
 	buildDate = oldBuildDate
@@ -75,7 +77,7 @@ func TestAppInfo_String(t *testing.T) {
 			gitTreeState: "dirty",
 			metadata:     "build-info",
 			date:         "2021-05-19T15:24:12Z",
-			expBuild:     "+sha.build-info",
+			expBuild:     "+sha.dirty.buildDate:2021-05-19T15:24:12Z.build-info",
 		},
 	}
 	for _, c := range cases {
@@ -88,7 +90,8 @@ func TestAppInfo_String(t *testing.T) {
 			buildDate = c.date
 			gitTreeState = c.gitTreeState
 			got := Get().String()
-			exp := name + "/" + version + c.expBuild + " GoVersion: " + runtime.Version()
+			exp := name + "/" + version + c.expBuild + " GoVersion: " + runtime.Version() +
+				" GoPlatform: " + runtime.GOARCH + " GoCompiler: " + runtime.Compiler
 			require.Equal(t, exp, got)
 		})
 	}

@@ -13,9 +13,9 @@ This example shows all settable attributes:
 ```shell
 tag=$(git describe --tag)
 commit=$(git rev-parse --short HEAD)
-meta="build on $HOSTNAME"
+meta="buildhost:$HOSTNAME"
 buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
-treeState=$(git diff --quiet && echo 'clean' || echo 'dirty')
+treeState=$(test -n "`git status --porcelain`" && echo 'dirty' || echo 'clean')
 go build -ldflags "\
     -X github.com/ionos-cloud/go-appinfo.name=my-app \
     -X github.com/ionos-cloud/go-appinfo.version=$tag \
