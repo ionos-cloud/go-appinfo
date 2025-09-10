@@ -1,27 +1,34 @@
 # go-appinfo
 
-A package to provide application information settable during build time.
+A module to provide application information, extending the standard values during build time.
 
-This package can be used to compile the application information into a binary. Useful, for example, when 
-building user agent strings (which is actually provided as function). 
+This module can be used to compile additional application information into a binary and retrieve it together with the
+standard information at runtime. For example, it allows building user agent strings (via `UserAgent()` function).
 
-This package does not make assumptions. It will provide the Compiler, Platform and GoVersion since these
-values are unambiguously determinable by the Runtime. Other fields need to be set by the builder with ldflags.
+The following values are determined automatically, but partially require building from within a git repository:
+- version (via [Go modules](https://go.dev/ref/mod#versions))
+- commit hash
+- tree state (dirty/clean), i.e. whether there are uncommitted changes in the working directory
+- compiler
+- Go version used for compilation
+- platform/architecture
+
+Other values can be set during build time via `ldflags`:
+- name
+- metadata
+- build date
+
+If no name is set explicitly, it defaults to the [module path](https://go.dev/ref/mod#module-path)'s part after the last
+`/`.
 
 This example shows all settable attributes:
 
 ```shell
-tag=$(git describe --tag)
-commit=$(git rev-parse --short HEAD)
 meta="buildhost:$HOSTNAME"
 buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
-treeState=$(test -n "`git status --porcelain`" && echo 'dirty' || echo 'clean')
 go build -ldflags "\
     -X github.com/ionos-cloud/go-appinfo.name=my-app \
-    -X github.com/ionos-cloud/go-appinfo.version=$tag \
     -X github.com/ionos-cloud/go-appinfo.metadata=$meta \
     -X github.com/ionos-cloud/go-appinfo.buildDate=$buildDate \
-    -X github.com/ionos-cloud/go-appinfo.gitCommit=$commit \
-    -X github.com/ionos-cloud/go-appinfo.gitTreeState=$treeState \
-    " ./...
+    " ./cmd
 ```
