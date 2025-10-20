@@ -19,16 +19,15 @@ package appinfo
 import (
 	"fmt"
 	"runtime"
+	"runtime/debug"
+	"strconv"
 	"strings"
 )
 
 var (
-	name         = ""
-	version      = "v0.0.0"
-	metadata     = ""
-	gitCommit    = ""
-	gitTreeState = ""
-	buildDate    = ""
+	name      = ""
+	metadata  = ""
+	buildDate = ""
 )
 
 // AppInfo holds all information about the application
@@ -43,9 +42,9 @@ type AppInfo struct {
 
 // BuildInfo describes the compile-time information.
 type BuildInfo struct {
-	// GitCommit is the git sha1.
+	// GitCommit is the git commit hash.
 	GitCommit string `json:"gitCommit,omitempty"`
-	// GitTreeState is the state of the git tree, either clean or dirty
+	// GitTreeState is the state of the git tree, either "clean" or "dirty"
 	GitTreeState string `json:"gitTreeState,omitempty"`
 	// Date when the binary was built
 	Date string `json:"date,omitempty"`
@@ -62,20 +61,32 @@ type BuildInfo struct {
 // Get returns the AppInfo
 func Get() AppInfo {
 	return AppInfo{
-		Name:    name,
-		Version: version,
+		Name:    Name(),
+		Version: Version(),
 		Build:   Build(),
 	}
 }
 
 // Name returns the application name
 func Name() string {
-	return name
+	if name != "" {
+		return name
+	}
+	bi, ok := debug.ReadBuildInfo()
+	if !ok {
+		return ""
+	}
+	parts := strings.Split(bi.Main.Path, "/")
+	return parts[len(parts)-1]
 }
 
 // Version returns the application version
 func Version() string {
-	return version
+	bi, ok := debug.ReadBuildInfo()
+	if !ok {
+		return ""
+	}
+	return bi.Main.Version
 }
 
 // UserAgent returns a standard user agent string in the format "name/version"
@@ -108,13 +119,38 @@ func (info AppInfo) String() string {
 
 // Build returns the BuildInfo
 func Build() BuildInfo {
-	return BuildInfo{
-		GitCommit:    gitCommit,
-		GitTreeState: gitTreeState,
-		Date:         buildDate,
-		Metadata:     metadata,
-		GoVersion:    runtime.Version(),
-		Compiler:     runtime.Compiler,
-		Platform:     runtime.GOARCH,
+	buildInfo := BuildInfo{
+		Date:     buildDate,
+		Metadata: metadata,
+
+		GoVersion: runtime.Version(),
+		Compiler:  runtime.Compiler,
+		Platform:  runtime.GOARCH,
+	}
+
+	bi, ok := debug.ReadBuildInfo()
+	if !ok {
+		return buildInfo
+	}
+
+	buildInfo.populateFromSettings(bi.Settings)
+
+	return buildInfo
+}
+
+func (b *BuildInfo) populateFromSettings(settings []debug.BuildSetting) {
+	for _, setting := range settings {
+		switch setting.Key {
+		case "vcs.revision":
+			b.GitCommit = setting.Value
+		case "vcs.modified":
+			if modified, err := strconv.ParseBool(setting.Value); err == nil {
+				if modified {
+					b.GitTreeState = "dirty"
+				} else {
+					b.GitTreeState = "clean"
+				}
+			}
+		}
 	}
 }

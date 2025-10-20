@@ -18,78 +18,79 @@ package appinfo
 
 import (
 	"runtime"
+	"runtime/debug"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
 var (
-	oldVersion      = version
-	oldName         = name
-	oldMetadata     = metadata
-	oldGitCommit    = gitCommit
-	oldGitTreeState = gitTreeState
-	oldBuildDate    = buildDate
+	version = "(devel)" // version available during tests
+
+	oldName      = name
+	oldMetadata  = metadata
+	oldBuildDate = buildDate
 )
 
 func resetAppInfo() {
-	version = oldVersion
-	gitCommit = oldGitCommit
-	gitTreeState = oldGitTreeState
-	metadata = oldMetadata
 	name = oldName
+	metadata = oldMetadata
 	buildDate = oldBuildDate
 }
 
 func TestVersion(t *testing.T) {
-	defer resetAppInfo()
-	version = "v1.0.0"
 	require.Equal(t, version, Version())
 }
 
 func TestUserAgent(t *testing.T) {
-	defer resetAppInfo()
-	version = "v1.0.0"
+	t.Cleanup(resetAppInfo)
 	name = "app"
 	require.Equal(t, name+"/"+version, UserAgent())
 }
 
 func TestName(t *testing.T) {
-	defer resetAppInfo()
-	name = "app"
-	require.Equal(t, name, Name())
+	t.Run("default", func(t *testing.T) {
+		require.Equal(t, "go-appinfo", Name())
+	})
+
+	t.Run("custom name", func(t *testing.T) {
+		t.Cleanup(resetAppInfo)
+		name = "app"
+		require.Equal(t, name, Name())
+	})
 }
 
 func TestAppInfo_String(t *testing.T) {
 	cases := []struct {
-		name         string
-		gitCommit    string
-		gitTreeState string
-		metadata     string
-		expBuild     string
-		date         string
+		name     string
+		metadata string
+		expBuild string
+		date     string
 	}{
 		{
-			name: "no metadata",
+			name:     "no metadata",
+			expBuild: "+hash.dirty",
 		}, {
-			name:         "complete",
-			gitCommit:    "sha",
-			gitTreeState: "dirty",
-			metadata:     "build-info",
-			date:         "2021-05-19T15:24:12Z",
-			expBuild:     "+sha.dirty.buildDate:2021-05-19T15:24:12Z.build-info",
+			name:     "complete",
+			metadata: "build-info",
+			date:     "2021-05-19T15:24:12Z",
+			expBuild: "+hash.dirty.buildDate:2021-05-19T15:24:12Z.build-info",
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			defer resetAppInfo()
+			t.Cleanup(resetAppInfo)
 			name = "app"
-			version = "v0.0.0"
-			gitCommit = c.gitCommit
 			metadata = c.metadata
 			buildDate = c.date
-			gitTreeState = c.gitTreeState
-			got := Get().String()
+			info := AppInfo{
+				Name:    Name(),
+				Version: Version(),
+				Build:   Build(),
+			}
+			info.Build.GitCommit = "hash"
+			info.Build.GitTreeState = "dirty"
+			got := info.String()
 			exp := name + "/" + version + c.expBuild + " GoVersion: " + runtime.Version() +
 				" GoPlatform: " + runtime.GOARCH + " GoCompiler: " + runtime.Compiler
 			require.Equal(t, exp, got)
@@ -98,9 +99,8 @@ func TestAppInfo_String(t *testing.T) {
 }
 
 func TestGet(t *testing.T) {
-	defer resetAppInfo()
+	t.Cleanup(resetAppInfo)
 	name = "app"
-	version = "v0.0.0"
 	exp := AppInfo{
 		Version: version,
 		Name:    name,
@@ -110,18 +110,25 @@ func TestGet(t *testing.T) {
 }
 
 func TestBuild(t *testing.T) {
-	defer resetAppInfo()
-	gitCommit = "sha"
-	gitTreeState = "clean"
+	t.Cleanup(resetAppInfo)
 	metadata = "meta"
 	exp := BuildInfo{
-		GitCommit:    gitCommit,
-		GitTreeState: gitTreeState,
-		Date:         buildDate,
-		Metadata:     metadata,
-		GoVersion:    runtime.Version(),
-		Compiler:     runtime.Compiler,
-		Platform:     runtime.GOARCH,
+		Date:      buildDate,
+		Metadata:  metadata,
+		GoVersion: runtime.Version(),
+		Compiler:  runtime.Compiler,
+		Platform:  runtime.GOARCH,
 	}
 	require.Equal(t, exp, Build())
+}
+
+func TestBuildInfo_populateFromSettings(t *testing.T) {
+	b := BuildInfo{}
+	settings := []debug.BuildSetting{
+		{Key: "vcs.revision", Value: "hash"},
+		{Key: "vcs.modified", Value: "true"},
+	}
+	b.populateFromSettings(settings)
+	require.Equal(t, "hash", b.GitCommit)
+	require.Equal(t, "dirty", b.GitTreeState)
 }
